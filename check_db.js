@@ -1,0 +1,1 @@
+import { supabase } from './src/lib/supabaseClient'; async function run() { const { data, error } = await supabase.from('profiles').select('*').limit(1); console.log('Profiles:', data, error); const { data: up, error: e2 } = await supabase.from('user_progress').select('*').limit(1); console.log('User progress:', up, e2); } run();

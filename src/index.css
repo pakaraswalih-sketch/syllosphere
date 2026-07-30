@@ -1,0 +1,299 @@
+@import "tailwindcss";
+
+/* ============================================================
+   SYLLOSPHERE ADMIN DASHBOARD — CSS CUSTOM PROPERTIES
+   Applied globally; used by all admin components via var()
+   ============================================================ */
+:root {
+  /* Backgrounds */
+  --bg-primary: #0D0D0D;
+  --bg-secondary: #141414;
+  --bg-card: #1A1A1A;
+  --bg-hover: #1F1F1F;
+
+  /* Borders */
+  --border-default: #2A2A2A;
+  --border-gold: #D97706;
+
+  /* Text */
+  --text-primary: #F5F5F5;
+  --text-secondary: #A3A3A3;
+  --text-muted: #525252;
+
+  /* Accent Gold */
+  --accent-gold: #F59E0B;
+  --accent-gold-hover: #FBBF24;
+  --accent-gold-dim: rgba(245, 158, 11, 0.12);
+
+  /* Status */
+  --danger: #EF4444;
+  --success: #22C55E;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* Admin animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-gold-50: #fffaeb;
+  --color-gold-100: #fcefc7;
+  --color-gold-200: #fade92;
+  --color-gold-300: #f8c95a;
+  --color-gold-400: #f6af25;
+  --color-gold-500: #f4930b;
+  --color-gold-600: #d97206;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
+  --color-gold-900: #78350f;
+
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-loading-bar: loadingBar 2s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-glow: glow 2s ease-in-out infinite;
+
+  @keyframes loadingBar {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(0%); }
+    100% { transform: translateX(100%); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(244, 147, 11, 0.2); }
+    50% { box-shadow: 0 0 40px rgba(244, 147, 11, 0.5); }
+  }
+}
+
+@layer base {
+  .markdown-body {
+    @apply text-[#e2e8f0] leading-relaxed;
+  }
+  .markdown-body h1 {
+    @apply text-3xl font-serif text-gold-400 mb-4 mt-8;
+  }
+  .markdown-body h2 {
+    @apply text-2xl font-serif text-gold-200 mb-3 mt-6;
+  }
+  .markdown-body h3 {
+    @apply text-xl font-bold text-[#e2e8f0] mb-2 mt-4;
+  }
+  .markdown-body p {
+    @apply mb-4 text-[#cbd5e1] leading-relaxed;
+  }
+  .markdown-body ul {
+    @apply list-disc list-inside mb-4 space-y-2 text-[#cbd5e1];
+  }
+  .markdown-body ol {
+    @apply list-decimal list-inside mb-4 space-y-2 text-[#cbd5e1];
+  }
+  .markdown-body code {
+    @apply bg-[#1e293b] px-1.5 py-0.5 rounded font-mono text-sm text-gold-500;
+  }
+  .markdown-body blockquote {
+    @apply border-l-4 border-gold-500 pl-4 italic my-6 text-[#94a3b8];
+  }
+  .markdown-body strong {
+    @apply text-gold-300 font-semibold;
+  }
+}
+
+@layer components {
+  /* =========================================
+     GLOBAL LIGHT LESSON THEME OVERRIDES
+     ========================================= */
+  
+  /* Hide the dark header inside HTML */
+  .light-lesson-theme .markdown-content header {
+    display: none !important;
+  }
+  
+  /* Force typography universally */
+  .light-lesson-theme .markdown-content,
+  .light-lesson-theme .markdown-content * {
+    font-family: var(--font-sans) !important;
+  }
+  
+  /* Main cards (Sections and wrapper divs) */
+  .light-lesson-theme .markdown-content section,
+  .light-lesson-theme .markdown-content > div > section,
+  .light-lesson-theme .markdown-content > div > div > section {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    border-radius: 24px !important;
+    padding: 32px !important;
+    margin-bottom: 32px !important;
+    color: #334155 !important;
+  }
+
+  @media (max-width: 768px) {
+    .light-lesson-theme .markdown-content section,
+    .light-lesson-theme .markdown-content > div > section,
+    .light-lesson-theme .markdown-content > div > div > section {
+      padding: 24px !important;
+      border-radius: 20px !important;
+      margin-bottom: 24px !important;
+    }
+  }
+  
+  /* Section Titles (h2) */
+  .light-lesson-theme .markdown-content h2,
+  .light-lesson-theme .markdown-content h2 * {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    color: #0F172A !important;
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 24px !important;
+    letter-spacing: -0.02em !important;
+    margin-top: 0 !important;
+  }
+  
+  /* Subtitles (h3) */
+  .light-lesson-theme .markdown-content h3,
+  .light-lesson-theme .markdown-content h3 * {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #3466F6 !important;
+    margin-bottom: 16px !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    margin-top: 0 !important;
+  }
+
+  /* Subtitles (h4, h5) */
+  .light-lesson-theme .markdown-content h4,
+  .light-lesson-theme .markdown-content h5,
+  .light-lesson-theme .markdown-content h4 *,
+  .light-lesson-theme .markdown-content h5 * {
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    color: #0F172A !important;
+    margin-bottom: 8px !important;
+  }
+  
+  /* Body Text */
+  .light-lesson-theme .markdown-content p,
+  .light-lesson-theme .markdown-content p * {
+    color: #475569 !important;
+    font-size: 16px !important;
+    line-height: 1.7 !important;
+    margin-bottom: 16px !important;
+  }
+  
+  /* Override ALL legacy dark backgrounds to Concept Cards */
+  .light-lesson-theme .markdown-content [class*="bg-slate-9"],
+  .light-lesson-theme .markdown-content [class*="bg-slate-8"] {
+    background-color: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+    padding: 24px !important;
+    margin-bottom: 24px !important;
+  }
+
+  /* Text color overrides */
+  .light-lesson-theme .markdown-content [class*="text-gold-"],
+  .light-lesson-theme .markdown-content [class*="text-slate-1"],
+  .light-lesson-theme .markdown-content [class*="text-slate-2"],
+  .light-lesson-theme .markdown-content [class*="text-slate-3"],
+  .light-lesson-theme .markdown-content [class*="text-white"] {
+    color: #0F172A !important;
+  }
+
+  .light-lesson-theme .markdown-content [class*="text-slate-4"],
+  .light-lesson-theme .markdown-content [class*="text-slate-5"] {
+    color: #475569 !important;
+  }
+
+  /* Border color overrides */
+  .light-lesson-theme .markdown-content [class*="border-white"],
+  .light-lesson-theme .markdown-content [class*="border-slate-"] {
+    border-color: #E2E8F0 !important;
+  }
+  
+  /* Inner grids (Concept Cards reset) */
+  .light-lesson-theme .markdown-content .grid {
+    gap: 24px !important;
+    margin-top: 24px !important;
+    margin-bottom: 24px !important;
+  }
+  .light-lesson-theme .markdown-content .grid > div {
+    background-color: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+  }
+  .light-lesson-theme .markdown-content .grid p {
+    font-size: 15px !important;
+    margin-bottom: 0 !important;
+    color: #475569 !important;
+  }
+  
+  /* Semantic card overrides */
+  .light-lesson-theme .markdown-content [class*="bg-emerald-"] {
+    background-color: #F0FDF4 !important;
+    border-color: #DCFCE7 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+  }
+  .light-lesson-theme .markdown-content [class*="text-emerald-"] {
+    color: #059669 !important;
+  }
+  
+  .light-lesson-theme .markdown-content [class*="bg-blue-"],
+  .light-lesson-theme .markdown-content [class*="bg-sky-"] {
+    background-color: #EFF6FF !important;
+    border-color: #DBEAFE !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+  }
+  .light-lesson-theme .markdown-content [class*="text-blue-"],
+  .light-lesson-theme .markdown-content [class*="text-sky-"] {
+    color: #2563EB !important;
+  }
+  
+  .light-lesson-theme .markdown-content [class*="bg-amber-"],
+  .light-lesson-theme .markdown-content [class*="bg-rose-"] {
+    background-color: #FFFBEB !important;
+    border-color: #FEF3C7 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+  }
+  .light-lesson-theme .markdown-content [class*="text-amber-"],
+  .light-lesson-theme .markdown-content [class*="text-rose-"] {
+    color: #D97706 !important;
+  }
+
+  /* List items */
+  .light-lesson-theme .markdown-content ul li {
+    font-size: 15px !important;
+    padding: 16px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    color: #475569 !important;
+    margin-bottom: 8px !important;
+  }
+  .light-lesson-theme .markdown-content ul li span,
+  .light-lesson-theme .markdown-content ul li strong {
+    color: #0F172A !important;
+    font-weight: 600 !important;
+  }
+}

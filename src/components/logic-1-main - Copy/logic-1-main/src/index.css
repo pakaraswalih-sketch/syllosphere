@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cinzel", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-gold-50: #fffaeb;
+  --color-gold-100: #fcefc7;
+  --color-gold-200: #fade92;
+  --color-gold-300: #f8c95a;
+  --color-gold-400: #f6af25;
+  --color-gold-500: #f4930b;
+  --color-gold-600: #d97206;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
+  --color-gold-900: #78350f;
+
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-loading-bar: loadingBar 2s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-glow: glow 2s ease-in-out infinite;
+
+  @keyframes loadingBar {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(0%); }
+    100% { transform: translateX(100%); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(244, 147, 11, 0.2); }
+    50% { box-shadow: 0 0 40px rgba(244, 147, 11, 0.5); }
+  }
+}
+
+@layer base {
+  .markdown-body {
+    @apply text-[#e2e8f0] leading-relaxed;
+  }
+  .markdown-body h1 {
+    @apply text-3xl font-serif text-gold-400 mb-4 mt-8;
+  }
+  .markdown-body h2 {
+    @apply text-2xl font-serif text-gold-200 mb-3 mt-6;
+  }
+  .markdown-body h3 {
+    @apply text-xl font-bold text-[#e2e8f0] mb-2 mt-4;
+  }
+  .markdown-body p {
+    @apply mb-4 text-[#cbd5e1] leading-relaxed;
+  }
+  .markdown-body ul {
+    @apply list-disc list-inside mb-4 space-y-2 text-[#cbd5e1];
+  }
+  .markdown-body ol {
+    @apply list-decimal list-inside mb-4 space-y-2 text-[#cbd5e1];
+  }
+  .markdown-body code {
+    @apply bg-[#1e293b] px-1.5 py-0.5 rounded font-mono text-sm text-gold-500;
+  }
+  .markdown-body blockquote {
+    @apply border-l-4 border-gold-500 pl-4 italic my-6 text-[#94a3b8];
+  }
+  .markdown-body strong {
+    @apply text-gold-300 font-semibold;
+  }
+}
