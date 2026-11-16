@@ -9,7 +9,11 @@ const quizCache: Record<string, QuizQuestion[]> = {};
 const visualCache: Record<string, string> = {};
 
 const getAIClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('Gemini API key is not configured. Please set VITE_GEMINI_API_KEY.');
+  }
+  return new GoogleGenAI({ apiKey });
 };
 
 export const generateLessonContent = async (topic: string, description: string): Promise<LessonContent> => {
@@ -169,7 +173,7 @@ export const getLogicExplanation = async (query: string): Promise<string> => {
 export class ChatService {
     private chat: Chat;
     constructor() {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
         this.chat = ai.chats.create({
             model: MODEL_NAME,
             config: {
