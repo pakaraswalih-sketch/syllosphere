@@ -345,33 +345,39 @@ const SignupSuccess = ({ email, onGoToLogin }: { email: string, onGoToLogin: () 
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020617] p-4 sm:p-6 text-center">
-      <div className="w-full max-w-lg fade-in">
-        <div className="bg-slate-900/40 p-8 sm:p-12 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden flex flex-col items-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-4 sm:p-6 text-center font-sans">
+      <div className="w-full max-w-md animate-[fadeIn_0.3s_ease-out]">
+        <div className="bg-white p-6 sm:p-10 rounded-3xl border border-slate-100 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.07)] relative overflow-hidden flex flex-col items-center">
           
-          {/* Background Glow */}
-          <div className="absolute top-0 w-full h-1/2 bg-emerald-500/10 blur-[60px] rounded-full scale-150 -z-10"></div>
+          {/* Subtle Brand Background Glow */}
+          <div className="absolute top-0 w-full h-32 bg-blue-500/5 blur-[50px] rounded-full scale-125 -z-10 pointer-events-none"></div>
 
-          <div className="w-20 h-20 bg-emerald-500/10 rounded-full border border-emerald-500/20 flex items-center justify-center mb-8 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-            <CheckCircleIcon className="w-10 h-10 text-emerald-400" />
+          {/* Icon Badge */}
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-50 rounded-2xl sm:rounded-3xl border border-blue-100 flex items-center justify-center mb-6 shadow-sm">
+            <CheckCircleIcon className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
           </div>
 
-          <h2 className="text-3xl font-serif text-white mb-2"><EditableText contentKey="ui.signup.title" fallback="Account Created" disableIcon /></h2>
-          <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+          {/* Heading & Subtitle */}
+          <h2 className="text-2xl sm:text-3xl font-bold text-[#0f172a] mb-2 tracking-tight">
+            <EditableText contentKey="ui.signup.title" fallback="Account Created" disableIcon />
+          </h2>
+          <p className="text-slate-500 text-xs sm:text-sm mb-6 leading-relaxed font-medium">
             A verification link has been sent to <br/>
-            <strong className="text-white font-mono">{email}</strong>
+            <strong className="text-[#0f172a] font-semibold">{email}</strong>
           </p>
 
-          <div className="bg-slate-950/50 border border-gold-500/10 rounded-xl p-5 mb-8 w-full">
-            <p className="text-gold-400 text-xs font-mono uppercase tracking-widest leading-relaxed">
+          {/* Note Banner */}
+          <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 sm:p-4 mb-6 w-full text-center">
+            <p className="text-blue-700 text-[11px] sm:text-xs font-semibold tracking-wide leading-relaxed">
               <EditableText contentKey="ui.signup.verify_note" fallback="Please check your inbox and verify your account before logging in." disableIcon />
             </p>
           </div>
 
-          <div className="flex flex-col gap-4 w-full">
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-3 w-full">
             <button 
               onClick={handleOpenEmail}
-              className="w-full py-4 bg-white hover:bg-slate-200 text-slate-900 font-bold rounded-xl transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-lg hover:shadow-white/20 hover:-translate-y-0.5"
+              className="w-full py-3.5 sm:py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/20 text-xs sm:text-sm flex items-center justify-center gap-2.5 tracking-wide"
             >
                <MailIcon className="w-4 h-4" />
                {isGmail ? <EditableText contentKey="ui.signup.open_gmail" fallback="Open Gmail" disableIcon /> : <EditableText contentKey="ui.signup.open_email" fallback="Open Email Provider" disableIcon />}
@@ -379,22 +385,23 @@ const SignupSuccess = ({ email, onGoToLogin }: { email: string, onGoToLogin: () 
 
             <button 
               onClick={onGoToLogin}
-              className="w-full py-4 border border-white/10 hover:border-white/30 text-white font-bold rounded-xl transition-all uppercase tracking-widest text-xs"
+              className="w-full py-3.5 sm:py-4 border border-slate-200 hover:bg-slate-50 active:scale-[0.99] text-[#0f172a] font-bold rounded-xl transition-all text-xs sm:text-sm tracking-wide"
             >
               <EditableText contentKey="ui.signup.go_login" fallback="Go to Login" disableIcon />
             </button>
           </div>
 
-          <div className="mt-8 flex flex-col items-center gap-2">
+          {/* Resend Link */}
+          <div className="mt-6 flex flex-col items-center gap-2">
             <button 
               onClick={handleResend}
               disabled={resending}
-              className="text-slate-500 hover:text-gold-400 text-[10px] uppercase font-mono tracking-widest transition-colors disabled:opacity-50"
+              className="text-slate-400 hover:text-blue-600 text-xs font-semibold tracking-wide transition-colors disabled:opacity-50"
             >
               {resending ? 'Sending...' : <EditableText contentKey="ui.signup.resend" fallback="Resend Verification Email" disableIcon />}
             </button>
             {resendMsg && (
-              <p className={`text-[10px] font-mono tracking-wider ${resendMsg.includes('Failed') ? 'text-rose-400' : 'text-emerald-400'}`}>
+              <p className={`text-xs font-medium ${resendMsg.includes('Failed') ? 'text-rose-500' : 'text-emerald-600'}`}>
                 {resendMsg}
               </p>
             )}
