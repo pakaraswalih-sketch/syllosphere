@@ -27,6 +27,8 @@ import UserDashboard from './components/UserDashboard';
 import Leaderboard from './components/Leaderboard';
 import AdminQuizEditor from './components/AdminQuizEditor';
 import { AdminConsultDesk } from './components/AdminConsultDesk';
+import { AdminConsultUpgraded } from './components/AdminConsultUpgraded';
+import { AdminManage } from './components/AdminManage';
 import Certificate from './components/Certificate';
 import { LiveConsultInterface } from './components/LiveConsultInterface';
 import { useGlassHighlight } from './hooks/useGlassHighlight';
@@ -37,7 +39,7 @@ import ResetPassword from './components/ResetPassword';
 const INITIAL_HASH = typeof window !== 'undefined' ? window.location.hash : '';
 
 // --- Types ---
-type AppView = 'landing' | 'enrollment' | 'levelSelection' | 'dashboard' | 'lesson' | 'signupSuccess' | 'userDashboard' | 'adminConsult' | 'leaderboard' | 'certificate' | 'settings' | 'resetPassword';
+type AppView = 'landing' | 'enrollment' | 'levelSelection' | 'dashboard' | 'lesson' | 'signupSuccess' | 'userDashboard' | 'adminConsult' | 'adminManage' | 'leaderboard' | 'certificate' | 'settings' | 'resetPassword';
 type AuthModalMode = 'login' | 'signup' | 'forgot_password' | null;
 
 interface Candidate {
@@ -1709,7 +1711,7 @@ export default function App() {
       }
 
       const hash = window.location.hash.replace('#', '');
-      const validViews: AppView[] = ['landing', 'enrollment', 'levelSelection', 'dashboard', 'lesson', 'signupSuccess', 'userDashboard', 'adminConsult', 'leaderboard', 'certificate', 'settings', 'resetPassword'];
+      const validViews: AppView[] = ['landing', 'enrollment', 'levelSelection', 'dashboard', 'lesson', 'signupSuccess', 'userDashboard', 'adminConsult', 'adminManage', 'leaderboard', 'certificate', 'settings', 'resetPassword'];
       if (hash === 'profile' || hash === 'settings') {
         setView('settings');
       } else if (validViews.includes(hash as AppView)) {
@@ -1892,7 +1894,7 @@ export default function App() {
     }
   };
 
-  const showHeader = ['adminConsult'].includes(view);
+  const showHeader = ['adminConsult', 'adminManage'].includes(view);
   const isLightView = view === 'userDashboard' || view === 'levelSelection' || view === 'dashboard' || view === 'lesson' || view === 'leaderboard' || view === 'certificate';
 
   useEffect(() => {
@@ -1923,6 +1925,7 @@ export default function App() {
           onLogout={handleLogout} 
           onDashboard={() => setView('userDashboard')} 
           onAdminConsult={() => setView('adminConsult')}
+          onAdminManage={() => setView('adminManage')}
           onSettings={() => setView('settings')}
           isAdmin={isAdmin}
           avatarUrl={candidate.avatarUrl}
@@ -1999,8 +2002,13 @@ export default function App() {
       )}
       
       {view === 'adminConsult' && isAdmin && (
-        <AdminConsultDesk
+        <AdminConsultUpgraded
           lessons={lessons}
+          onBack={() => setView('userDashboard')}
+        />
+      )}
+      {view === 'adminManage' && isAdmin && (
+        <AdminManage
           onBack={() => setView('userDashboard')}
         />
       )}
