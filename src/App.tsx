@@ -1957,6 +1957,9 @@ export default function App() {
           onHome={() => setView('landing')}
           onLeaderboard={() => setView('leaderboard')}
           onCertificate={() => setView('certificate')}
+          onAdminManage={isAdmin ? () => setView('adminManage') : undefined}
+          onAdminConsult={isAdmin ? () => setView('adminConsult') : undefined}
+          isAdmin={isAdmin}
         />
       )}
       {view === 'levelSelection' && (

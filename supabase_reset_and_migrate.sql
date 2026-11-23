@@ -215,3 +215,4 @@ UNION ALL SELECT 'user_progress', count(*) FROM user_progress
 UNION ALL SELECT 'consult_threads', count(*) FROM consult_threads
 UNION ALL SELECT 'consult_messages', count(*) FROM consult_messages
 UNION ALL SELECT 'auth_users', count(*) FROM auth.users;
+

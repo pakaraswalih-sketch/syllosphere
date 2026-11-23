@@ -392,3 +392,4 @@ export const AdminManage: React.FC<AdminManageProps> = ({ onBack }) => {
 };
 
 export default AdminManage;
+
