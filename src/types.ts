@@ -20,6 +20,7 @@ export interface Lesson {
     topic: string;
     description: string;
     difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Master';
+    order_index?: number;
     content?: LessonContent;
     quiz?: QuizQuestion[];
     base_xp?: number;

@@ -6,6 +6,7 @@ interface EditableHTMLProps {
   contentKey: string;
   fallbackHTML: string;
   className?: string;
+  lessonNumber?: number;
 }
 
 // Given raw HTML string, parse into an array of block objects with stable IDs
@@ -218,7 +219,7 @@ const EditBlock = ({
 
 
 // ---- Main component ----
-export function EditableHTML({ contentKey, fallbackHTML, className = '' }: EditableHTMLProps) {
+export function EditableHTML({ contentKey, fallbackHTML, className = '', lessonNumber }: EditableHTMLProps) {
   const { get, updateContent, isAdmin } = useCMS();
   const rawHtml = get(contentKey, fallbackHTML);
 
@@ -268,7 +269,7 @@ export function EditableHTML({ contentKey, fallbackHTML, className = '' }: Edita
 
   // Section IDs that create a new top-level block
   const SECTION_IDS = new Set(['header', 'section', 'section-2col', 'section-3col']);
-  const lessonIdStr = contentKey.split('.')[1] || 'Content';
+  const lessonIdStr = lessonNumber !== undefined ? String(lessonNumber) : (contentKey.split('.')[1] || 'Content');
 
   const addBlock = useCallback((html: string, templateId: string) => {
     const wrapper = document.createElement('div');

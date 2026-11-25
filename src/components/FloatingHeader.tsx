@@ -8,13 +8,12 @@ interface FloatingHeaderProps {
   onLogout?: () => void;
   onDashboard?: () => void;
   onAdminConsult?: () => void;
-  onAdminManage?: () => void;
   onSettings?: () => void;
   isAdmin?: boolean;
   avatarUrl?: string | null;
 }
 
-const FloatingHeader: React.FC<FloatingHeaderProps> = ({ candidateName, activeLevel, onLogout, onDashboard, onAdminConsult, onAdminManage, onSettings, isAdmin, avatarUrl }) => {
+const FloatingHeader: React.FC<FloatingHeaderProps> = ({ candidateName, activeLevel, onLogout, onDashboard, onAdminConsult, onSettings, isAdmin, avatarUrl }) => {
   const { containerRef, highlightRef, handleMouseMove, handleMouseEnter, handleMouseLeave } = useGlassHighlight();
 
   return (
@@ -52,20 +51,12 @@ const FloatingHeader: React.FC<FloatingHeaderProps> = ({ candidateName, activeLe
 
         {candidateName && (
           <div className="flex items-center gap-4 pl-6 border-l border-white/10">
-            {isAdmin && onAdminManage && (
-              <button
-                onClick={onAdminManage}
-                className="text-[9px] text-blue-400 hover:text-blue-300 font-mono uppercase tracking-widest transition-colors border border-blue-500/20 px-3 py-1.5 rounded-lg hover:border-blue-500/40 hover:bg-blue-500/5 shadow-lg shadow-blue-500/10"
-              >
-                Manage
-              </button>
-            )}
             {isAdmin && onAdminConsult && (
               <button
                 onClick={onAdminConsult}
                 className="text-[9px] text-emerald-400 hover:text-emerald-300 font-mono uppercase tracking-widest transition-colors border border-emerald-500/20 px-3 py-1.5 rounded-lg hover:border-emerald-500/40 hover:bg-emerald-500/5 shadow-lg shadow-emerald-500/10"
               >
-                Consult
+                Consult Desk
               </button>
             )}
             {onDashboard && (

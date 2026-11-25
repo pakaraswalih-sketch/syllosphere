@@ -258,43 +258,148 @@ export const Settings: React.FC<SettingsProps> = ({ userName, email, isAdmin = f
     // App.tsx handles the routing
   };
 
+  const isProtectedAdmin =
+    isAdmin ||
+    ['pakaraswalih@gmail.com', 'admin@syllosphere.com'].includes((email || '').trim().toLowerCase());
+
+  const clearLocalAuthStorage = () => {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('sb-') || k.includes('supabase') || k.includes('syllosphere'))) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (_) {}
+    try {
+      sessionStorage.clear();
+    } catch (_) {}
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') return;
+
+    if (isProtectedAdmin) {
+      setErrorMsg('Admin accounts are protected and cannot be deleted.');
+      return;
+    }
+
     setLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No active user session found.');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user || !session?.access_token) {
+        throw new Error('No active authenticated session found. Please log in again.');
+      }
 
-      // 1. Execute backend RPC user account deletion (deletes auth user & cascades to all related tables & storage)
-      const { error: rpcError } = await supabase.rpc('delete_user_account');
-      
-      if (rpcError) {
-        // If RPC function is missing from Supabase schema cache, execute client-side data cleanup
-        if (rpcError.message?.includes('Could not find the function') || rpcError.message?.includes('schema cache')) {
-          await supabase.from('user_progress').delete().eq('user_id', user.id);
-          try {
-            await supabase.from('consult_threads').delete().eq('user_id', user.id);
-          } catch (_) {}
+      let backendDeleted = false;
+      let shouldFallbackToEdgeOrRpc = false;
 
-          await supabase.auth.signOut();
-          setShowDeleteAccount(false);
-          window.location.hash = '';
-          window.location.href = window.location.origin + window.location.pathname;
-          return;
+      // 1. Primary secure backend deletion via /api/delete-account (Supabase Admin API)
+      try {
+        const resp = await fetch('/api/delete-account', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        const contentType = resp.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        const payload = isJson ? await resp.json() : null;
+
+        if (resp.ok && payload?.success) {
+          backendDeleted = true;
+        } else if (
+          resp.status === 404 ||
+          resp.status === 501 ||
+          !isJson ||
+          payload?.code === 'MISSING_SERVICE_ROLE_KEY'
+        ) {
+          // Server endpoint missing or missing service role key in this runtime -> try Edge/RPC
+          shouldFallbackToEdgeOrRpc = true;
         } else {
-          throw rpcError;
+          throw new Error(payload?.error || `Account deletion failed (${resp.status}).`);
+        }
+      } catch (networkOrApiErr: any) {
+        if (
+          networkOrApiErr?.name === 'TypeError' ||
+          String(networkOrApiErr?.message || '').includes('Failed to fetch')
+        ) {
+          shouldFallbackToEdgeOrRpc = true;
+        } else {
+          throw networkOrApiErr;
         }
       }
 
-      // 2. Sign out & destroy local session
-      await supabase.auth.signOut();
+      // 2. Fallback to Supabase Edge Function if /api route is unavailable/unconfigured
+      if (!backendDeleted && shouldFallbackToEdgeOrRpc) {
+        let edgeSucceeded = false;
+        try {
+          const { data: edgeData, error: edgeError } = await supabase.functions.invoke('delete-account');
+          if (!edgeError && edgeData?.success) {
+            edgeSucceeded = true;
+            backendDeleted = true;
+          } else if (edgeError) {
+            const msg = String(edgeError.message || '');
+            // Only fall through to RPC if Edge Function isn't deployed (404 / Relay / Failed to send)
+            const isNotDeployed =
+              msg.includes('404') ||
+              msg.includes('NOT_FOUND') ||
+              msg.includes('Failed to send a request') ||
+              msg.includes('FunctionsFetchError');
+            if (!isNotDeployed) {
+              throw new Error(msg || 'Account deletion failed.');
+            }
+          }
+        } catch (edgeCatchErr: any) {
+          const msg = String(edgeCatchErr?.message || '');
+          const isNotDeployed =
+            msg.includes('404') ||
+            msg.includes('NOT_FOUND') ||
+            msg.includes('Failed to send a request') ||
+            msg.includes('FunctionsFetchError');
+          if (!isNotDeployed) {
+            throw edgeCatchErr;
+          }
+        }
+
+        // 3. Fallback to hardened PostgreSQL SECURITY DEFINER RPC (deletes auth.users + all user data)
+        if (!edgeSucceeded) {
+          const { error: rpcError } = await supabase.rpc('delete_user_account');
+          if (rpcError) {
+            if (
+              rpcError.message?.includes('Could not find the function') ||
+              rpcError.message?.includes('schema cache')
+            ) {
+              throw new Error(
+                'Backend account deletion service is not configured yet. Please configure SUPABASE_SERVICE_ROLE_KEY or deploy the delete-account backend.'
+              );
+            }
+            throw new Error(rpcError.message || 'Backend account deletion failed.');
+          }
+          backendDeleted = true;
+        }
+      }
+
+      if (!backendDeleted) {
+        throw new Error('Unable to verify backend account deletion. Your account was not deleted.');
+      }
+
+      // 4. Only after confirmed backend deletion: clear session & local storage, then redirect to login/signup
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch (_) {}
+      clearLocalAuthStorage();
       setShowDeleteAccount(false);
-      window.location.hash = '';
-      window.location.href = window.location.origin + window.location.pathname;
+      setDeleteConfirmText('');
+      window.location.href = window.location.origin + window.location.pathname + '#login';
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to delete account.');
+      setErrorMsg(err?.message || 'Failed to delete account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -583,11 +688,16 @@ export const Settings: React.FC<SettingsProps> = ({ userName, email, isAdmin = f
                   <div className="flex flex-col sm:flex-row items-center justify-between p-6 rounded-2xl border border-rose-100 bg-rose-50/50 gap-4">
                     <div>
                       <h4 className="font-bold text-rose-700 mb-1">Delete Account</h4>
-                      <p className="text-xs text-rose-600/70 font-medium max-w-sm">Permanently delete your account, progress, and all associated data. This action cannot be undone.</p>
+                      <p className="text-xs text-rose-600/70 font-medium max-w-sm">
+                        {isProtectedAdmin
+                          ? 'Administrator accounts are protected and cannot be deleted.'
+                          : 'Permanently delete your account, progress, and all associated data. This action cannot be undone.'}
+                      </p>
                     </div>
                     <button 
-                      onClick={() => setShowDeleteAccount(true)}
-                      className="px-6 py-3 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold text-sm transition-all w-full sm:w-auto shrink-0"
+                      onClick={() => { setErrorMsg(''); setDeleteConfirmText(''); setShowDeleteAccount(true); }}
+                      disabled={isProtectedAdmin}
+                      className="px-6 py-3 bg-rose-100 hover:bg-rose-200 disabled:opacity-50 disabled:cursor-not-allowed text-rose-700 rounded-xl font-bold text-sm transition-all w-full sm:w-auto shrink-0"
                     >
                       Delete Account
                     </button>
@@ -646,7 +756,7 @@ export const Settings: React.FC<SettingsProps> = ({ userName, email, isAdmin = f
       {showDeleteAccount && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative border-2 border-rose-100">
-            <button onClick={() => setShowDeleteAccount(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
+            <button onClick={() => { setShowDeleteAccount(false); setErrorMsg(''); setDeleteConfirmText(''); }} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
               <XCircleIcon className="w-6 h-6" />
             </button>
             <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mb-6 text-rose-600 mx-auto">
@@ -665,11 +775,18 @@ export const Settings: React.FC<SettingsProps> = ({ userName, email, isAdmin = f
               value={deleteConfirmText}
               onChange={e => setDeleteConfirmText(e.target.value)}
               placeholder="DELETE"
-              className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold text-center text-[#0f172a] outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 mb-6 transition-all" 
+              className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold text-center text-[#0f172a] outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 mb-4 transition-all" 
             />
+
+            {errorMsg && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-medium flex items-start gap-2">
+                <XCircleIcon className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
             
             <div className="flex gap-3">
-              <button onClick={() => setShowDeleteAccount(false)} className="flex-1 py-3.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-bold text-sm">
+              <button onClick={() => { setShowDeleteAccount(false); setErrorMsg(''); setDeleteConfirmText(''); }} className="flex-1 py-3.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl font-bold text-sm">
                 Cancel
               </button>
               <button 

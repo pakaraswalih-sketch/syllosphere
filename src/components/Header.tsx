@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { 
   BrainCircuitIcon, LayoutDashboardIcon, LogOutIcon, MenuIcon, XCircleIcon, 
-  UserIcon, SettingsIcon, BookOpenIcon, Edit3Icon, ClipboardListIcon, BarChart2Icon, 
-  TrophyIcon, AwardIcon, BookmarkIcon, MessageSquareIcon, ArrowLeftIcon
+  UserIcon, SettingsIcon, BookOpenIcon, 
+  TrophyIcon, AwardIcon, MessageSquareIcon, ArrowLeftIcon
 } from './Icons';
 
 interface HeaderProps {
@@ -11,6 +11,13 @@ interface HeaderProps {
   variant?: 'default' | 'dashboard';
   isAdmin?: boolean;
   avatarUrl?: string | null;
+}
+
+function normalizeActiveHash(rawHash: string): string {
+  const h = rawHash || '#userDashboard';
+  if (h === '#dashboard' || h === '#lesson') return '#levelSelection';
+  if (h === '#profile') return '#settings';
+  return h;
 }
 
 // ── Shared Profile Dropdown Component ──────────────────────────────────────
@@ -63,13 +70,15 @@ const MobileHamburgerMenuOverlay = ({
   onClose,
   onNav,
   onSignOut,
-  navItems
+  navItems,
+  activeHash
 }: {
   isOpen: boolean;
   onClose: () => void;
   onNav: (hash: string) => void;
   onSignOut: () => void;
   navItems: Array<{ label: string; icon: React.ReactNode; hash: string }>;
+  activeHash: string;
 }) => {
   if (!isOpen) return null;
   return (
@@ -91,17 +100,24 @@ const MobileHamburgerMenuOverlay = ({
         
         <div className="flex-1 overflow-y-auto py-4">
           <div className="flex flex-col px-3 gap-1">
-            {navItems.map((item, idx) => (
-              <button 
-                key={idx}
-                type="button"
-                onClick={() => onNav(item.hash)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A] rounded-[12px] font-medium text-sm transition-colors"
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
+            {navItems.map((item) => {
+              const isActive = activeHash === item.hash;
+              return (
+                <button 
+                  key={item.hash}
+                  type="button"
+                  onClick={() => onNav(item.hash)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-[12px] text-sm transition-colors ${
+                    isActive
+                      ? 'bg-[#EFF6FF] text-[#3466F6] font-bold'
+                      : 'text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A] font-medium'
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         </div>
         
@@ -122,12 +138,31 @@ const MobileHamburgerMenuOverlay = ({
 export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', isAdmin = false, avatarUrl }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const [activeHash, setActiveHash] = useState<string>(() =>
+    typeof window !== 'undefined' ? normalizeActiveHash(window.location.hash) : '#userDashboard'
+  );
+  const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
+  const desktopProfileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Sync active hash when route changes
+  useEffect(() => {
+    const syncHash = () => setActiveHash(normalizeActiveHash(window.location.hash));
+    syncHash();
+    window.addEventListener('hashchange', syncHash);
+    window.addEventListener('popstate', syncHash);
+    return () => {
+      window.removeEventListener('hashchange', syncHash);
+      window.removeEventListener('popstate', syncHash);
+    };
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const inMobile = mobileProfileMenuRef.current?.contains(target);
+      const inDesktop = desktopProfileMenuRef.current?.contains(target);
+      if (!inMobile && !inDesktop) {
         setIsProfileMenuOpen(false);
       }
     };
@@ -143,38 +178,36 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
     window.location.href = window.location.origin + window.location.pathname;
   };
 
-  const allNavItems = [
+  // Consistent nav order: Dashboard, Lessons, Leaderboard, Certificates, [Consult Desk for admin], Settings
+  const baseNavItems = [
     { label: 'Dashboard', icon: <LayoutDashboardIcon className="w-5 h-5" />, hash: '#userDashboard' },
     { label: 'Lessons', icon: <BookOpenIcon className="w-5 h-5" />, hash: '#levelSelection' },
-    { label: 'Practice', icon: <Edit3Icon className="w-5 h-5" />, hash: '#practice' }, 
-    { label: 'Quizzes', icon: <ClipboardListIcon className="w-5 h-5" />, hash: '#quizzes' }, 
-    { label: 'Progress', icon: <BarChart2Icon className="w-5 h-5" />, hash: '#progress' }, 
     { label: 'Leaderboard', icon: <TrophyIcon className="w-5 h-5" />, hash: '#leaderboard' },
     { label: 'Certificates', icon: <AwardIcon className="w-5 h-5" />, hash: '#certificate' },
-    { label: 'Bookmarks', icon: <BookmarkIcon className="w-5 h-5" />, hash: '#bookmarks' }, 
-    { label: 'Settings', icon: <SettingsIcon className="w-5 h-5" />, hash: '#settings' }, 
-    { label: 'Consult Desk', icon: <MessageSquareIcon className="w-5 h-5" />, hash: '#adminConsult' },
   ];
 
   const navItems = isAdmin 
-    ? allNavItems 
-    : allNavItems.filter(item => ['Dashboard', 'Lessons', 'Leaderboard', 'Certificates', 'Settings'].includes(item.label));
+    ? [...baseNavItems, { label: 'Consult Desk', icon: <MessageSquareIcon className="w-5 h-5" />, hash: '#adminConsult' }, { label: 'Settings', icon: <SettingsIcon className="w-5 h-5" />, hash: '#settings' }]
+    : [...baseNavItems, { label: 'Settings', icon: <SettingsIcon className="w-5 h-5" />, hash: '#settings' }];
 
   const handleNav = (hash: string) => {
     window.location.hash = hash;
+    setActiveHash(normalizeActiveHash(hash));
     setIsMobileMenuOpen(false);
     setIsProfileMenuOpen(false);
   };
+
+  const displayInitial = userName ? userName.charAt(0).toUpperCase() : 'A';
 
   if (variant === 'dashboard') {
     return (
       <>
         <header className="h-[64px] md:h-[72px] border-b border-[#E2E8F0] bg-white flex items-center justify-between px-4 md:px-8 shrink-0">
           <div className="flex items-center gap-3">
-            <button className="md:hidden p-1 text-[#0F172A]" onClick={() => setIsMobileMenuOpen(true)}>
+            <button className="md:hidden p-1 text-[#0F172A]" onClick={() => setIsMobileMenuOpen(true)} aria-label="Open menu">
               <MenuIcon className="w-6 h-6" />
             </button>
-            <div className="flex items-center gap-2 md:hidden">
+            <div className="flex items-center gap-2 md:hidden cursor-pointer" onClick={() => handleNav('#userDashboard')}>
               <div className="w-8 h-8 bg-[#3466F6] rounded-lg flex items-center justify-center text-white shrink-0">
                 <BrainCircuitIcon className="w-4 h-4" />
               </div>
@@ -189,18 +222,18 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
           </div>
 
           <div className="flex items-center gap-4 md:gap-6">
-            <div className="flex items-center gap-3 pl-4 md:pl-6 border-l border-[#E2E8F0] relative" ref={profileMenuRef}>
+            <div className="flex items-center gap-3 pl-4 md:pl-6 border-l border-[#E2E8F0] relative" ref={desktopProfileMenuRef}>
               <button onClick={(e) => { e.stopPropagation(); setIsProfileMenuOpen(!isProfileMenuOpen); }} className="flex items-center gap-3 text-left">
                 <div className="w-8 h-8 md:w-10 md:h-10 bg-[#EFF6FF] rounded-full flex items-center justify-center text-[#3466F6] font-bold text-sm md:text-lg border border-blue-100 relative overflow-hidden">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    userName.charAt(0).toUpperCase()
+                    displayInitial
                   )}
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white z-10"></div>
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-sm font-bold text-[#0F172A] leading-none mb-1">{userName}</p>
+                  <p className="text-sm font-bold text-[#0F172A] leading-none mb-1">{userName || 'Admin'}</p>
                   <p className="text-[11px] text-[#64748B] font-medium">Active Candidate</p>
                 </div>
               </button>
@@ -220,6 +253,7 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
           onNav={handleNav} 
           onSignOut={handleSignOut} 
           navItems={navItems} 
+          activeHash={activeHash}
         />
       </>
     );
@@ -231,7 +265,7 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
         
         {/* MOBILE HEADER (md:hidden) */}
         <div className="flex items-center justify-between w-full md:hidden">
-          <button className="p-2 -ml-2 text-[#0F172A]" onClick={() => setIsMobileMenuOpen(true)}>
+          <button className="p-2 -ml-2 text-[#0F172A]" onClick={() => setIsMobileMenuOpen(true)} aria-label="Open menu">
             <MenuIcon className="w-6 h-6" />
           </button>
           
@@ -245,13 +279,13 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
             </div>
           </div>
 
-          <div className="flex items-center gap-3 relative" ref={profileMenuRef}>
+          <div className="flex items-center gap-3 relative" ref={mobileProfileMenuRef}>
             <button className="relative" onClick={(e) => { e.stopPropagation(); setIsProfileMenuOpen(!isProfileMenuOpen); }}>
               <div className="w-8 h-8 rounded-full bg-[#EFF6FF] border border-blue-100 text-[#3466F6] flex items-center justify-center font-bold text-sm shrink-0">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
                 ) : (
-                  userName.charAt(0).toUpperCase()
+                  displayInitial
                 )}
               </div>
               <div className="absolute bottom-0 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white"></div>
@@ -265,7 +299,7 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
           </div>
         </div>
 
-        {/* DESKTOP HEADER (hidden md:flex) */}
+        {/* DESKTOP & TABLET HEADER (hidden md:flex) */}
         <div className="hidden md:flex items-center justify-between w-full">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleNav('#userDashboard')}>
             <div className="w-10 h-10 border border-white/20 rounded-xl flex items-center justify-center bg-white/5 text-white">
@@ -276,11 +310,23 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
               <span className="text-[9px] text-slate-400 font-bold tracking-[0.15em] uppercase leading-none">LEARNING PLATFORM</span>
             </div>
           </div>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3 lg:gap-4">
+            {isAdmin && (
+              <button
+                onClick={() => handleNav('#adminConsult')}
+                className={`flex items-center gap-2 text-[10px] font-bold tracking-widest uppercase px-4 py-2 rounded-lg transition-all duration-300 border ${
+                  activeHash === '#adminConsult'
+                    ? 'bg-white text-[#1D4ED8] border-white shadow-sm'
+                    : 'text-white bg-white/5 border-white/20 hover:bg-white/10 hover:border-white/30 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)]'
+                }`}
+              >
+                <MessageSquareIcon className="w-3.5 h-3.5" /> CONSULT DESK
+              </button>
+            )}
             <button onClick={() => handleNav('#userDashboard')} className="flex items-center gap-2 text-[10px] text-white font-bold tracking-widest uppercase bg-white/5 border border-white/20 px-4 py-2 rounded-lg hover:bg-white/10 hover:border-white/30 hover:shadow-[0_0_15px_rgba(255,255,255,0.15)] transition-all duration-300">
               <LayoutDashboardIcon className="w-3.5 h-3.5" /> DASHBOARD
             </button>
-            <div className="flex items-center gap-3 pl-5 border-l border-white/10 relative" ref={profileMenuRef}>
+            <div className="flex items-center gap-3 pl-4 lg:pl-5 border-l border-white/10 relative" ref={desktopProfileMenuRef}>
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsProfileMenuOpen(!isProfileMenuOpen); }}
                 className="flex items-center gap-3 text-left group"
@@ -289,11 +335,11 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
                   ) : (
-                    userName.charAt(0).toUpperCase()
+                    displayInitial
                   )}
                 </div>
                 <div className="text-right hidden lg:block">
-                  <p className="text-[11px] text-white font-bold leading-none mb-1">{userName}</p>
+                  <p className="text-[11px] text-white font-bold leading-none mb-1">{userName || 'Admin'}</p>
                   <p className="text-[8px] text-blue-200 font-bold tracking-widest uppercase leading-none">ACTIVE CANDIDATE</p>
                 </div>
               </button>
@@ -315,6 +361,7 @@ export const Header: React.FC<HeaderProps> = ({ userName, variant = 'default', i
         onNav={handleNav} 
         onSignOut={handleSignOut} 
         navItems={navItems} 
+        activeHash={activeHash}
       />
     </>
   );

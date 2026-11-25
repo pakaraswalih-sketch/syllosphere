@@ -1,7 +1,12 @@
+import dotenv from "dotenv";
+dotenv.config();
+dotenv.config({ path: ".env.local", override: false });
+
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import { executeAccountDeletion } from "./api/_lib/deleteAccount";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +20,11 @@ async function startServer() {
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", message: "SylloSphere API is active" });
+  });
+
+  app.post("/api/delete-account", async (req, res) => {
+    const result = await executeAccountDeletion(req.headers.authorization);
+    res.status(result.status).json(result.body);
   });
 
   // Vite middleware for development

@@ -5,6 +5,7 @@ import { EditableHTML } from './components/EditableHTML';
 import { AdminInspector } from './components/AdminInspector';
 import { supabase } from './lib/supabaseClient';
 import { logActivity, getLessons } from './lib/adminService';
+import { sortLessons, getLessonDisplayNumber, normalizeLevel } from './lib/lessonUtils';
 import { startHeartbeat } from './lib/heartbeat';
 import { createRoot } from 'react-dom/client';
 import { DIFFICULTY_COLORS } from './constants';
@@ -19,16 +20,12 @@ import {
   UsersIcon, FileTextIcon, ClipboardListIcon, BarChart2Icon, MenuIcon,
   LayoutDashboardIcon, LogOutIcon, TrophyIcon, AwardIcon, SettingsIcon
 } from './components/Icons';
-import SyllogismValidator from './components/SyllogismValidator';
 import { Header } from './components/Header';
-import FloatingHeader from './components/FloatingHeader';
 import AuthModal from './components/AuthModals';
 import UserDashboard from './components/UserDashboard';
 import Leaderboard from './components/Leaderboard';
 import AdminQuizEditor from './components/AdminQuizEditor';
 import { AdminConsultDesk } from './components/AdminConsultDesk';
-import { AdminConsultUpgraded } from './components/AdminConsultUpgraded';
-import { AdminManage } from './components/AdminManage';
 import Certificate from './components/Certificate';
 import { LiveConsultInterface } from './components/LiveConsultInterface';
 import { useGlassHighlight } from './hooks/useGlassHighlight';
@@ -39,7 +36,7 @@ import ResetPassword from './components/ResetPassword';
 const INITIAL_HASH = typeof window !== 'undefined' ? window.location.hash : '';
 
 // --- Types ---
-type AppView = 'landing' | 'enrollment' | 'levelSelection' | 'dashboard' | 'lesson' | 'signupSuccess' | 'userDashboard' | 'adminConsult' | 'adminManage' | 'leaderboard' | 'certificate' | 'settings' | 'resetPassword';
+type AppView = 'landing' | 'enrollment' | 'levelSelection' | 'dashboard' | 'lesson' | 'signupSuccess' | 'userDashboard' | 'adminConsult' | 'leaderboard' | 'certificate' | 'settings' | 'resetPassword';
 type AuthModalMode = 'login' | 'signup' | 'forgot_password' | null;
 
 interface Candidate {
@@ -415,70 +412,6 @@ const SignupSuccess = ({ email, onGoToLogin }: { email: string, onGoToLogin: () 
   );
 };
 
-// --- Shared Mobile Menu Component ---
-const SharedMobileMenu = ({
-  isOpen,
-  onClose,
-  onDashboard,
-  onLessons,
-  onLeaderboard,
-  activeTab = 'lessons'
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onDashboard: () => void;
-  onLessons: () => void;
-  onLeaderboard?: () => void;
-  activeTab?: 'dashboard' | 'lessons' | 'leaderboard';
-}) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex md:hidden animate-[fadeIn_0.2s_ease-out]">
-      <div className="absolute inset-0 bg-[#0F172A]/20 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative w-[280px] h-full bg-white shadow-2xl flex flex-col animate-[slideInLeft_0.3s_ease-out]">
-        <div className="p-6 flex items-center justify-between border-b border-[#E2E8F0]">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#3466F6] rounded-lg flex items-center justify-center text-white shrink-0">
-              <BrainCircuitIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-[14px] font-bold tracking-[0.1em] text-[#0F172A] font-serif leading-none mb-0.5">SYLLOSPHERE</h1>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-[#64748B] hover:text-[#0F172A]">
-            <XCircleIcon className="w-6 h-6" />
-          </button>
-        </div>
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          <button onClick={() => { onClose(); onDashboard(); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-[16px] font-bold text-sm transition-all ${activeTab === 'dashboard' ? 'bg-[#EFF6FF] text-[#3466F6]' : 'text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A]'}`}>
-            <LayoutDashboardIcon className="w-5 h-5" /> Dashboard
-          </button>
-          <button onClick={() => { onClose(); onLessons(); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-[16px] font-bold text-sm transition-all ${activeTab === 'lessons' ? 'bg-[#EFF6FF] text-[#3466F6]' : 'text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A]'}`}>
-            <BookOpenIcon className="w-5 h-5" /> Lessons
-          </button>
-          <button onClick={() => { onClose(); if(onLeaderboard) onLeaderboard(); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-[16px] font-bold text-sm transition-all ${activeTab === 'leaderboard' ? 'bg-[#EFF6FF] text-[#3466F6]' : 'text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A]'}`}>
-            <TrophyIcon className="w-5 h-5" /> Leaderboard
-          </button>
-          <button onClick={() => { onClose(); window.location.hash = '#certificate'; }} className="w-full flex items-center gap-3 px-4 py-3.5 text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A] rounded-[16px] font-medium text-sm transition-all">
-            <AwardIcon className="w-5 h-5" /> Certificates
-          </button>
-          <button onClick={() => { onClose(); window.location.hash = '#settings'; }} className="w-full flex items-center gap-3 px-4 py-3.5 text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A] rounded-[16px] font-medium text-sm transition-all">
-            <SettingsIcon className="w-5 h-5" /> Settings
-          </button>
-        </nav>
-        <div className="p-4 border-t border-[#E2E8F0]">
-          <button 
-            onClick={() => { onClose(); handleLogout(); }}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-red-50 text-red-600 rounded-xl font-bold text-sm hover:bg-red-100 transition-colors"
-          >
-            <LogOutIcon className="w-4 h-4" /> Sign Out
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // --- Level Selection Component ---
 const LevelSelection = ({ 
   unlockedLevels, 
@@ -596,7 +529,7 @@ const LevelSelection = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 w-full max-w-5xl mx-auto z-10 fade-in px-2 md:px-0">
         {levels.map((level, index) => {
           const isUnlocked = unlockedLevels.includes(level);
-          const levelLessons = lessons.filter(l => l.difficulty === level);
+          const levelLessons = lessons.filter(l => normalizeLevel(l.difficulty) === level);
           const levelLessonCount = levelLessons.length;
           const completedInLevel = levelLessons.filter(l => completedLessonIds.includes(l.id)).length;
           
@@ -772,7 +705,7 @@ const Dashboard = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { get: cms } = useCMS();
   const levelLessons = useMemo(() => {
-    return lessons.filter(l => l.difficulty === activeLevel);
+    return sortLessons(lessons).filter(l => normalizeLevel(l.difficulty) === activeLevel);
   }, [activeLevel, lessons]);
 
   const levelLessonCount = levelLessons.length;
@@ -871,6 +804,7 @@ const Dashboard = ({
                 }
                 
                 const isCurrent = lessonStatus === 'In Progress';
+                const displayNumber = getLessonDisplayNumber(lessons, lesson.id) ?? (idx + 1);
 
                 return (
                   <div key={lesson.id} className="flex items-start md:items-center gap-4 md:gap-6 w-full group">
@@ -880,7 +814,7 @@ const Dashboard = ({
                       isCompleted ? 'bg-[#3466F6] text-white' :
                       'bg-[#94A3B8] text-white'
                     }`}>
-                      {idx + 1}
+                      {displayNumber}
                     </div>
 
                     {/* Lesson Card */}
@@ -897,7 +831,7 @@ const Dashboard = ({
                          </div>
 
                          <div className="flex flex-col flex-1 min-w-0 pr-1 md:pr-2">
-                           <p className="hidden md:block text-[9px] md:text-[10px] font-bold text-[#64748B] uppercase tracking-[0.15em] mb-1">Lesson {idx + 1}</p>
+                           <p className="hidden md:block text-[9px] md:text-[10px] font-bold text-[#64748B] uppercase tracking-[0.15em] mb-1">Lesson {displayNumber}</p>
                            <h3 className={`text-[13px] md:text-[16px] font-bold leading-snug truncate ${isUnlocked ? 'text-[#0F172A]' : 'text-[#0F172A]'}`}>
                              {lesson.title}
                            </h3>
@@ -995,7 +929,7 @@ const Dashboard = ({
 
 
 // --- Lesson View Component ---
-const LessonView = ({ lesson, candidate, onBack, onDashboard, onComplete, onLeaderboard }: { lesson: Lesson; candidate: Candidate; onBack: () => void; onDashboard: () => void; onComplete: () => void; onLeaderboard?: () => void }) => {
+const LessonView = ({ lesson, candidate, onBack, onDashboard, onComplete, onLeaderboard, allLessons }: { lesson: Lesson; candidate: Candidate; onBack: () => void; onDashboard: () => void; onComplete: () => void; onLeaderboard?: () => void; allLessons?: Lesson[] }) => {
   const { get: cms, updateContent, isAdmin, data: cmsData } = useCMS();
   const [activeTab, setActiveTab] = useState<Tab>('learn');
   const [content, setContent] = useState<LessonContent | null>(lesson.content || null);
@@ -1116,7 +1050,7 @@ const LessonView = ({ lesson, candidate, onBack, onDashboard, onComplete, onLead
                   <BookOpenIcon className="w-8 h-8 md:w-12 md:h-12" />
                </div>
                <div>
-                  <h3 className="text-[#64748B] font-bold tracking-[0.15em] text-[10px] md:text-xs uppercase mb-1">Lesson {lesson.id}</h3>
+                  <h3 className="text-[#64748B] font-bold tracking-[0.15em] text-[10px] md:text-xs uppercase mb-1">Lesson {allLessons ? (getLessonDisplayNumber(allLessons, lesson.id) ?? lesson.id) : lesson.id}</h3>
                   <h1 className="text-2xl md:text-5xl font-bold text-[#0F172A] mb-2 md:mb-4">{lesson.title}</h1>
                   <span className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-[#3466F6] rounded-full text-[10px] md:text-xs font-bold border border-blue-100">
                     <div className="w-2 h-2 rounded-full bg-[#3466F6]"></div>
@@ -1171,14 +1105,9 @@ const LessonView = ({ lesson, candidate, onBack, onDashboard, onComplete, onLead
                   <EditableHTML 
                     contentKey={`lesson.${lesson.id}.htmlContent`} 
                     fallbackHTML={processHtml(content.htmlContent)}
-                    className={`markdown-content text-slate-300 ${focusMode ? 'prose-lg' : ''}`} 
+                    className={`markdown-content text-slate-300 ${focusMode ? 'prose-lg' : ''}`}
+                    lessonNumber={allLessons ? (getLessonDisplayNumber(allLessons, lesson.id) ?? lesson.id) : lesson.id}
                   />
-                  
-                  {lesson.id === 18 && (
-                    <div className="mt-12 pt-12 border-t border-slate-200">
-                      <SyllogismValidator />
-                    </div>
-                  )}
                </> : <div className="flex items-center justify-center h-full"><button onClick={fetchContent} className="text-[#3466F6] uppercase font-bold text-xs tracking-widest">Re-Initialize Link</button></div>}
             </div>
           )}
@@ -1208,7 +1137,7 @@ const LessonView = ({ lesson, candidate, onBack, onDashboard, onComplete, onLead
 
           {activeTab === 'tutor' && (
             <div className="relative fade-in max-w-[1300px] mx-auto md:h-[calc(100vh-200px)] md:min-h-[500px] md:max-h-[800px]">
-              <LiveConsultInterface lesson={lesson} candidateName={candidate.name} />
+              <LiveConsultInterface lesson={lesson} candidateName={candidate.name} lessonNumber={allLessons ? (getLessonDisplayNumber(allLessons, lesson.id) ?? lesson.id) : lesson.id} />
             </div>
           )}
           
@@ -1453,13 +1382,19 @@ const QuizInterface = ({ questions, onComplete, onContinue }: { questions: QuizQ
               let circleStyles = "bg-[#F8FAFC] border-slate-200 text-[#64748B] group-hover:border-[#93C5FD] group-hover:bg-white group-hover:text-[#3466F6]";
               
               if (showResult) {
-                if (idx === question.correctAnswer) {
+                if (isCorrect && idx === question.correctAnswer) {
+                   // Only highlight correct answer green when user got it right
                    styles = "border-emerald-200 bg-[#F0FDF4]";
                    circleStyles = "bg-[#10B981] border-[#10B981] text-white";
                 }
-                else if (idx === selectedOption) {
+                else if (idx === selectedOption && !isCorrect) {
+                   // Highlight wrong selection in red
                    styles = "border-rose-200 bg-[#FEF2F2]";
                    circleStyles = "bg-[#EF4444] border-[#EF4444] text-white";
+                }
+                else if (!isCorrect) {
+                   // Don't reveal correct answer when wrong - keep all others neutral
+                   styles = "border-slate-100 bg-white opacity-50";
                 }
                 else {
                    styles = "border-slate-100 bg-white opacity-50 grayscale";
@@ -1508,10 +1443,12 @@ const QuizInterface = ({ questions, onComplete, onContinue }: { questions: QuizQ
                   {isCorrect ? <CheckCircleIcon className="w-7 h-7" /> : <XCircleIcon className="w-7 h-7" />}
                 </div>
                 <div>
-                  <h4 className={`font-bold text-xl mb-1 ${isCorrect ? 'text-[#059669]' : 'text-[#DC2626]'}`}>
-                    {isCorrect ? 'Excellent!' : 'Incorrect'}
+                  <h4 className={`font-bold text-xl ${isCorrect ? 'text-[#059669] mb-1' : 'text-[#DC2626]'}`}>
+                    {isCorrect ? 'Correct!' : 'Incorrect. Try again.'}
                   </h4>
-                  <p className="text-[#475569] text-sm leading-relaxed max-w-md">{question.explanation}</p>
+                  {isCorrect && (
+                    <p className="text-[#475569] text-sm leading-relaxed max-w-md">{question.explanation}</p>
+                  )}
                 </div>
               </div>
               <button 
@@ -1711,8 +1648,11 @@ export default function App() {
       }
 
       const hash = window.location.hash.replace('#', '');
-      const validViews: AppView[] = ['landing', 'enrollment', 'levelSelection', 'dashboard', 'lesson', 'signupSuccess', 'userDashboard', 'adminConsult', 'adminManage', 'leaderboard', 'certificate', 'settings', 'resetPassword'];
-      if (hash === 'profile' || hash === 'settings') {
+      const validViews: AppView[] = ['landing', 'enrollment', 'levelSelection', 'dashboard', 'lesson', 'signupSuccess', 'userDashboard', 'adminConsult', 'leaderboard', 'certificate', 'settings', 'resetPassword'];
+      if (hash === 'login' || hash === 'signup') {
+        setView('landing');
+        setAuthModal(hash);
+      } else if (hash === 'profile' || hash === 'settings') {
         setView('settings');
       } else if (validViews.includes(hash as AppView)) {
         setView(hash as AppView);
@@ -1853,7 +1793,7 @@ export default function App() {
     for (let i = 0; i < levels.length - 1; i++) {
       const currentLevel = levels[i];
       const nextLevel = levels[i + 1];
-      const levelLessons = lessons.filter(l => l.difficulty === currentLevel);
+      const levelLessons = lessons.filter(l => normalizeLevel(l.difficulty) === currentLevel);
       const allCompleted = levelLessons.length > 0 && levelLessons.every(l => completedLessonIds.includes(l.id));
       
       if (allCompleted) {
@@ -1894,13 +1834,12 @@ export default function App() {
     }
   };
 
-  const showHeader = ['adminConsult', 'adminManage'].includes(view);
-  const isLightView = view === 'userDashboard' || view === 'levelSelection' || view === 'dashboard' || view === 'lesson' || view === 'leaderboard' || view === 'certificate';
+  const isLightView = view === 'userDashboard' || view === 'levelSelection' || view === 'dashboard' || view === 'lesson' || view === 'leaderboard' || view === 'certificate' || view === 'adminConsult' || view === 'settings';
 
   useEffect(() => {
     const root = document.documentElement;
-    if (view === 'userDashboard' || view === 'landing' || view === 'levelSelection' || view === 'lesson' || view === 'leaderboard' || view === 'certificate') {
-      document.body.style.backgroundColor = (view === 'userDashboard' || view === 'leaderboard' || view === 'certificate') ? '#F8FAFC' : '#F3F7FF';
+    if (view === 'userDashboard' || view === 'landing' || view === 'levelSelection' || view === 'lesson' || view === 'leaderboard' || view === 'certificate' || view === 'adminConsult' || view === 'dashboard' || view === 'settings') {
+      document.body.style.backgroundColor = (view === 'userDashboard' || view === 'leaderboard' || view === 'certificate' || view === 'adminConsult') ? '#F8FAFC' : '#F3F7FF';
       root.style.setProperty('--scrollbar-bg', 'transparent');
       root.style.setProperty('--scrollbar-thumb', '#CBD5E1');
       root.style.setProperty('--scrollbar-thumb-hover', '#94A3B8');
@@ -1913,24 +1852,11 @@ export default function App() {
   }, [view]);
 
   return (
-    <div className={`${isLightView ? 'bg-[#F8FAFC] text-slate-900' : 'bg-[#020617] text-slate-200'} min-h-screen font-sans selection:bg-gold-500/30 overflow-x-hidden ${showHeader ? 'md:pt-28' : ''}`}>
+    <div className={`${isLightView ? 'bg-[#F8FAFC] text-slate-900' : 'bg-[#020617] text-slate-200'} min-h-screen font-sans selection:bg-gold-500/30 overflow-x-hidden`}>
       <AdminInspector lessons={lessons} onRefreshLessons={async () => {
         const data = await getLessons();
         if (data && data.length > 0) setLessons(data);
       }} />
-      {showHeader && (
-        <FloatingHeader 
-          candidateName={candidate.name} 
-          activeLevel={activeLevel} 
-          onLogout={handleLogout} 
-          onDashboard={() => setView('userDashboard')} 
-          onAdminConsult={() => setView('adminConsult')}
-          onAdminManage={() => setView('adminManage')}
-          onSettings={() => setView('settings')}
-          isAdmin={isAdmin}
-          avatarUrl={candidate.avatarUrl}
-        />
-      )}
 
       {/* Auth Modal */}
       {authModal && (
@@ -1957,8 +1883,6 @@ export default function App() {
           onHome={() => setView('landing')}
           onLeaderboard={() => setView('leaderboard')}
           onCertificate={() => setView('certificate')}
-          onAdminManage={isAdmin ? () => setView('adminManage') : undefined}
-          onAdminConsult={isAdmin ? () => setView('adminConsult') : undefined}
           isAdmin={isAdmin}
         />
       )}
@@ -1977,6 +1901,7 @@ export default function App() {
           lessons={lessons}
           completedLessonIds={isAdmin ? lessons.map(l => l.id) : completedLessonIds}
           avatarUrl={candidate.avatarUrl}
+          isAdmin={isAdmin}
         />
       )}
       {view === 'dashboard' && activeLevel && (
@@ -2005,14 +1930,11 @@ export default function App() {
       )}
       
       {view === 'adminConsult' && isAdmin && (
-        <AdminConsultUpgraded
+        <AdminConsultDesk
           lessons={lessons}
           onBack={() => setView('userDashboard')}
-        />
-      )}
-      {view === 'adminManage' && isAdmin && (
-        <AdminManage
-          onBack={() => setView('userDashboard')}
+          candidateName={candidate.name}
+          avatarUrl={candidate.avatarUrl}
         />
       )}
       {view === 'lesson' && activeLesson && (
@@ -2023,6 +1945,7 @@ export default function App() {
           onDashboard={() => setView('userDashboard')}
           onLeaderboard={() => setView('leaderboard')}
           onComplete={handleCompleteLesson}
+          allLessons={lessons}
         />
       )}
 

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Lesson } from '../types';
 import { addLesson, deleteLesson, seedLessons } from '../lib/adminService';
+import { sortLessons } from '../lib/lessonUtils';
 import { PlusIcon, TrashIcon, XIcon, LoaderIcon, DatabaseIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -65,6 +66,8 @@ const AdminLessonManager: React.FC<AdminLessonManagerProps> = ({ lessons, onRefr
     onRefresh();
     setLoading(false);
   };
+
+  const sortedLessons = useMemo(() => sortLessons(lessons), [lessons]);
 
   return (
     <div className="flex flex-col h-full bg-slate-900 overflow-hidden rounded-xl border border-gold-500/20 shadow-2xl">
@@ -168,11 +171,11 @@ const AdminLessonManager: React.FC<AdminLessonManagerProps> = ({ lessons, onRefr
         )}
 
         <div className="space-y-2">
-          {lessons.map((lesson) => (
+          {sortedLessons.map((lesson, idx) => (
             <div key={lesson.id} className="group flex items-center justify-between p-4 bg-slate-950/40 border border-white/5 rounded-2xl hover:border-white/10 transition-colors">
               <div className="flex items-center gap-4">
                 <div className="w-8 h-8 rounded-full bg-slate-900 border border-white/5 flex items-center justify-center text-[10px] font-mono text-slate-500">
-                  {lesson.id}
+                  {idx + 1}
                 </div>
                 <div>
                   <h5 className="text-white text-sm font-medium">{lesson.title}</h5>

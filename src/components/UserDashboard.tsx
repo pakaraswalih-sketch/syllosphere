@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Header } from './Header';
 import { Lesson } from '../types';
+import { normalizeLevel } from '../lib/lessonUtils';
 import {
   CheckCircleIcon, LockIcon, BrainCircuitIcon, LoaderIcon,
   LayoutDashboardIcon, BookOpenIcon, TrophyIcon, AwardIcon, SettingsIcon,
-  ArrowLeftIcon, UsersIcon, MessageSquareIcon
+  MessageSquareIcon, ArrowLeftIcon
 } from './Icons';
 
 interface UserDashboardProps {
@@ -18,8 +19,6 @@ interface UserDashboardProps {
   onHome?: () => void;
   onLeaderboard?: () => void;
   onCertificate?: () => void;
-  onAdminManage?: () => void;
-  onAdminConsult?: () => void;
   isAdmin?: boolean;
 }
 
@@ -33,8 +32,6 @@ const UserDashboard: React.FC<UserDashboardProps> = React.memo(({
   onHome,
   onLeaderboard,
   onCertificate,
-  onAdminManage,
-  onAdminConsult,
   isAdmin = false,
 }) => {
   const [joinDate, setJoinDate] = useState<string>('');
@@ -70,7 +67,7 @@ const UserDashboard: React.FC<UserDashboardProps> = React.memo(({
   const levels = ['Beginner', 'Intermediate', 'Advanced', 'Master'] as const;
   const levelData = useMemo(() => {
     return levels.map(level => {
-      const levelLessons = lessons.filter(l => l.difficulty === level);
+      const levelLessons = lessons.filter(l => normalizeLevel(l.difficulty) === level);
       const completed = levelLessons.filter(l => completedLessonIds.includes(l.id));
       const allDone = levelLessons.length > 0 && completed.length === levelLessons.length;
       return { level, total: levelLessons.length, completed: completed.length, allDone, lessons: levelLessons };
@@ -110,30 +107,14 @@ const UserDashboard: React.FC<UserDashboardProps> = React.memo(({
           <button onClick={() => window.location.hash = '#certificate'} className="w-full flex items-center gap-3 px-4 py-3.5 text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A] rounded-[16px] font-medium text-sm transition-all">
             <AwardIcon className="w-5 h-5" /> Certificates
           </button>
+          {isAdmin && (
+            <button onClick={() => window.location.hash = '#adminConsult'} className="w-full flex items-center gap-3 px-4 py-3.5 text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A] rounded-[16px] font-medium text-sm transition-all">
+              <MessageSquareIcon className="w-5 h-5" /> Consult Desk
+            </button>
+          )}
           <button onClick={() => window.location.hash = '#settings'} className="w-full flex items-center gap-3 px-4 py-3.5 text-[#64748B] hover:bg-slate-50 hover:text-[#0F172A] rounded-[16px] font-medium text-sm transition-all">
             <SettingsIcon className="w-5 h-5" /> Settings
           </button>
-
-          {/* Admin-only section */}
-          {isAdmin && (
-            <>
-              <div className="pt-3 pb-1 px-1">
-                <p className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-[0.2em]">Admin</p>
-              </div>
-              <button
-                onClick={onAdminManage}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-[#3466F6] hover:bg-[#EFF6FF] rounded-[16px] font-medium text-sm transition-all border border-[#3466F6]/20 hover:border-[#3466F6]/40"
-              >
-                <UsersIcon className="w-5 h-5" /> Manage
-              </button>
-              <button
-                onClick={onAdminConsult}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-emerald-600 hover:bg-emerald-50 rounded-[16px] font-medium text-sm transition-all border border-emerald-500/20 hover:border-emerald-500/40"
-              >
-                <MessageSquareIcon className="w-5 h-5" /> Consult
-              </button>
-            </>
-          )}
         </nav>
       </aside>
 
